@@ -6,12 +6,13 @@ from PyQt6.QtWidgets import (
     QTableWidget, QTableWidgetItem, QPushButton, QLabel,
     QMessageBox, QHeaderView, QAbstractItemView, QDialog
 )
-from PyQt6.QtCore import Qt, pyqtSlot
+from PyQt6.QtCore import Qt, pyqtSlot, QTimer
 
 from api.manager import ApiManager
 from gui.dialogs import CreateUserDialog, ResetPasswordDialog, AutoCleanDialog, LogViewerDialog
 from utils.logger import get_logger
 from utils.storage import add_to_cache, remove_from_cache
+from utils.helpers import get_operator_id
 
 logger = get_logger()
 
@@ -27,6 +28,11 @@ class MainWindow(QMainWindow):
 
         self.current_org_id = None
         self.current_tab_filter = "All"
+
+        self.update_timer = QTimer()
+        self.update_timer.setSingleShot(True)
+        self.update_timer.setInterval(200)
+        self.update_timer.timeout.connect(self._do_update_ui)
 
         self.setup_ui()
         self.setup_connections()
@@ -165,6 +171,9 @@ class MainWindow(QMainWindow):
             self.all_users.append(u)
 
         self.statusBar().showMessage(f"Loaded users for org {org_name}", 5000)
+        self.update_timer.start()
+
+    def _do_update_ui(self):
         self.update_stats()
         self.filter_table()
 
@@ -357,7 +366,7 @@ class MainWindow(QMainWindow):
                     "org_id": org_id,
                     "org_name": user.get("_org_name"),
                     "deleted_at": now_str,
-                    "deleted_by": "Admin (App)"
+                    "deleted_by": get_operator_id()
                 }
                 add_to_cache(user_id, cache_data)
                 logger.info(f"User {user_id} soft-deleted and added to cache.")

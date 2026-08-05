@@ -97,6 +97,12 @@ class CreateUserDialog(QDialog):
         clipboard = QGuiApplication.clipboard()
         clipboard.setText(self.password_input.text())
 
+    def accept(self):
+        if not self.first_name_input.text().strip() or not self.last_name_input.text().strip():
+            QMessageBox.warning(self, "Ошибка валидации", "Поля 'Имя' и 'Фамилия' обязательны для заполнения.")
+            return
+        super().accept()
+
     def get_data(self):
         org_id = self.org_combo.currentData()
         # Yandex 360 API structure for user creation

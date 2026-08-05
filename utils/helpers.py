@@ -1,5 +1,20 @@
 import random
 import string
+import os
+import getpass
+import socket
+
+def get_operator_id() -> str:
+    """Returns the operator identity in DOMAIN\\username@HOSTNAME format."""
+    domain = os.environ.get('USERDOMAIN', '')
+    user = getpass.getuser()
+    hostname = socket.gethostname()
+
+    # If USERDOMAIN is not available (e.g., on non-Windows systems), just use username@HOSTNAME
+    if domain:
+        return f"{domain}\\{user}@{hostname}"
+    else:
+        return f"{user}@{hostname}"
 
 def transliterate(text: str) -> str:
     """

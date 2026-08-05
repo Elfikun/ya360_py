@@ -52,12 +52,12 @@ class Yandex360Client:
                 users = data.get("users", [])
                 all_users.extend(users)
 
-                # If we got fewer users than requested, we're at the end
-                if len(users) < per_page:
+                # Safety checks against infinite loops
+                total_pages = data.get("pages", 1)
+
+                if len(users) < per_page or len(users) == 0 or page >= total_pages:
                     break
 
-                # Or if the API provides a 'pages' total we could use it,
-                # but checking length vs perPage is safe.
                 page += 1
             except requests.exceptions.RequestException as e:
                 logger.error(f"Failed to fetch users for org {org_id}: {e}")

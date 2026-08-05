@@ -1,7 +1,14 @@
 import logging
 import os
+from utils.helpers import get_operator_id
 
 LOG_FILE = "data/app.log"
+
+class OperatorFormatter(logging.Formatter):
+    """Custom formatter to inject the operator identity into the log."""
+    def format(self, record):
+        record.operator_id = get_operator_id()
+        return super().format(record)
 
 def setup_logger():
     """Configures the root logger to output to a file and console."""
@@ -13,7 +20,7 @@ def setup_logger():
 
     # Prevent adding handlers multiple times
     if not logger.handlers:
-        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+        formatter = OperatorFormatter('%(asctime)s - %(levelname)s - [Operator: %(operator_id)s] - %(message)s')
 
         # File handler
         file_handler = logging.FileHandler(LOG_FILE, encoding='utf-8')
