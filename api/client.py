@@ -67,17 +67,22 @@ class Yandex360Client:
 
     def create_user(self, org_id: str, user_data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Creates a new user in the specified organization.
-        user_data should contain: name, nickname, password, is_password_change_required, etc.
+        Creates a new user in the specified organization according to Yandex 360 Directory API spec.
         """
         url = f"{self.BASE_URL}/org/{org_id}/users"
+        payload = dict(user_data)
+        if "departmentId" not in payload:
+            payload["departmentId"] = 1
+
         try:
-            response = self.session.post(url, json=user_data)
+            logger.info(f"POST {url} payload: {payload}")
+            response = self.session.post(url, json=payload)
             response.raise_for_status()
             return response.json()
         except requests.exceptions.RequestException as e:
-            logger.error(f"Failed to create user in org {org_id}: {e}")
-            raise
+            err_msg = e.response.text if e.response is not None else str(e)
+            logger.error(f"Failed to create user in org {org_id}: {e} - Details: {err_msg}")
+            raise Exception(f"{e} - {err_msg}") from e
 
     def update_user(self, org_id: str, user_id: str, user_data: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -85,22 +90,31 @@ class Yandex360Client:
         """
         url = f"{self.BASE_URL}/org/{org_id}/users/{user_id}"
         try:
+            logger.info(f"PATCH {url} payload: {user_data}")
             response = self.session.patch(url, json=user_data)
             response.raise_for_status()
+            logger.info(f"PATCH response for user {user_id}: {response.text}")
             return response.json()
         except requests.exceptions.RequestException as e:
-            logger.error(f"Failed to update user {user_id} in org {org_id}: {e}")
-            raise
+            err_msg = e.response.text if e.response is not None else str(e)
+            logger.error(f"Failed to update user {user_id} in org {org_id}: {e} - Details: {err_msg}")
+            raise Exception(f"{e} - {err_msg}") from e
 
     def delete_user(self, org_id: str, user_id: str):
         """
         Permanently deletes a user from the organization.
+        If the user is disabled, Yandex 360 requires unblocking first.
         """
         url = f"{self.BASE_URL}/org/{org_id}/users/{user_id}"
         try:
             response = self.session.delete(url)
+            if response.status_code == 400 and "account.disabled" in response.text:
+                logger.info(f"User {user_id} is disabled. Unblocking before deletion...")
+                self.update_user(org_id, user_id, {"is_enabled": True})
+                response = self.session.delete(url)
             response.raise_for_status()
             return True
         except requests.exceptions.RequestException as e:
-            logger.error(f"Failed to delete user {user_id} in org {org_id}: {e}")
-            raise
+            err_msg = e.response.text if e.response is not None else str(e)
+            logger.error(f"Failed to delete user {user_id} in org {org_id}: {e} - Details: {err_msg}")
+            raise Exception(f"{e} - {err_msg}") from e

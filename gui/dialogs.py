@@ -20,17 +20,17 @@ class CreateUserDialog(QDialog):
 
         layout = QVBoxLayout(self)
 
-        # First Name
-        layout.addWidget(QLabel("Имя:"))
-        self.first_name_input = QLineEdit()
-        self.first_name_input.textChanged.connect(self.update_nickname)
-        layout.addWidget(self.first_name_input)
-
         # Last Name
-        layout.addWidget(QLabel("Фамилия:"))
+        layout.addWidget(QLabel("Фамилия *:"))
         self.last_name_input = QLineEdit()
         self.last_name_input.textChanged.connect(self.update_nickname)
         layout.addWidget(self.last_name_input)
+
+        # First Name
+        layout.addWidget(QLabel("Имя *:"))
+        self.first_name_input = QLineEdit()
+        self.first_name_input.textChanged.connect(self.update_nickname)
+        layout.addWidget(self.first_name_input)
 
         # Middle Name
         layout.addWidget(QLabel("Отчество (опционально):"))
@@ -68,11 +68,6 @@ class CreateUserDialog(QDialog):
         pass_layout.addWidget(copy_btn)
         layout.addLayout(pass_layout)
 
-        # Require password change
-        self.require_pass_change = QCheckBox("Требовать смену пароля при первом входе")
-        self.require_pass_change.setChecked(True)
-        layout.addWidget(self.require_pass_change)
-
         # Buttons
         btn_layout = QHBoxLayout()
         save_btn = QPushButton("Создать")
@@ -98,23 +93,27 @@ class CreateUserDialog(QDialog):
         clipboard.setText(self.password_input.text())
 
     def accept(self):
-        if not self.first_name_input.text().strip() or not self.last_name_input.text().strip():
-            QMessageBox.warning(self, "Ошибка валидации", "Поля 'Имя' и 'Фамилия' обязательны для заполнения.")
+        if not self.last_name_input.text().strip() or not self.first_name_input.text().strip():
+            QMessageBox.warning(self, "Ошибка валидации", "Поля 'Фамилия' и 'Имя' обязательны для заполнения.")
             return
         super().accept()
 
     def get_data(self):
         org_id = self.org_combo.currentData()
-        # Yandex 360 API structure for user creation
+        name_dict = {
+            "first": self.first_name_input.text().strip(),
+            "last": self.last_name_input.text().strip()
+        }
+        middle = self.middle_name_input.text().strip()
+        if middle:
+            name_dict["middle"] = middle
+
         return org_id, {
-            "name": {
-                "first": self.first_name_input.text().strip(),
-                "last": self.last_name_input.text().strip(),
-                "middle": self.middle_name_input.text().strip()
-            },
+            "name": name_dict,
             "nickname": self.nickname_input.text().strip(),
             "password": self.password_input.text(),
-            "is_password_change_required": self.require_pass_change.isChecked()
+            "departmentId": 1,
+            "passwordChangeRequired": True
         }
 
 
@@ -138,10 +137,6 @@ class ResetPasswordDialog(QDialog):
         pass_layout.addWidget(copy_btn)
         layout.addLayout(pass_layout)
 
-        self.require_pass_change = QCheckBox("Требовать смену пароля при первом входе")
-        self.require_pass_change.setChecked(True)
-        layout.addWidget(self.require_pass_change)
-
         btn_layout = QHBoxLayout()
         save_btn = QPushButton("Применить")
         save_btn.clicked.connect(self.accept)
@@ -157,7 +152,7 @@ class ResetPasswordDialog(QDialog):
         clipboard.setText(self.password_input.text())
 
     def get_data(self):
-        return self.password_input.text(), self.require_pass_change.isChecked()
+        return self.password_input.text(), True
 
 
 class AutoCleanDialog(QDialog):
@@ -278,3 +273,73 @@ class LogViewerDialog(QDialog):
 
         # Scroll to bottom again after filtering
         self.log_text.verticalScrollBar().setValue(self.log_text.verticalScrollBar().maximum())
+
+
+class UserCreatedSuccessDialog(QDialog):
+    def __init__(self, email: str, password: str, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Пользователь успешно создан")
+        self.setMinimumWidth(480)
+        self.email = email
+        self.password = password
+
+        layout = QVBoxLayout(self)
+
+        info_label = QLabel("Учетная запись успешно создана в Яндекс 360")
+        info_label.setStyleSheet("font-weight: bold; font-size: 14px; margin-bottom: 10px;")
+        layout.addWidget(info_label)
+
+        # Email / Login section
+        layout.addWidget(QLabel("Логин (email с доменом):"))
+        email_layout = QHBoxLayout()
+        self.email_input = QLineEdit(self.email)
+        self.email_input.setReadOnly(True)
+        email_layout.addWidget(self.email_input)
+
+        copy_email_btn = QPushButton("📋 Логин")
+        copy_email_btn.clicked.connect(self.copy_email)
+        email_layout.addWidget(copy_email_btn)
+        layout.addLayout(email_layout)
+
+        # Password section
+        layout.addWidget(QLabel("Пароль:"))
+        pass_layout = QHBoxLayout()
+        self.password_input = QLineEdit(self.password)
+        self.password_input.setReadOnly(True)
+        pass_layout.addWidget(self.password_input)
+
+        copy_pass_btn = QPushButton("📋 Пароль")
+        copy_pass_btn.clicked.connect(self.copy_password)
+        pass_layout.addWidget(copy_pass_btn)
+        layout.addLayout(pass_layout)
+
+        layout.addSpacing(15)
+
+        # Action Buttons
+        btn_layout = QHBoxLayout()
+        copy_all_btn = QPushButton("📋 Скопировать всё (Логин + Пароль)")
+        copy_all_btn.setStyleSheet("font-weight: bold; padding: 6px 12px;")
+        copy_all_btn.clicked.connect(self.copy_all)
+
+        close_btn = QPushButton("Закрыть")
+        close_btn.clicked.connect(self.accept)
+
+        btn_layout.addWidget(copy_all_btn)
+        btn_layout.addWidget(close_btn)
+        layout.addLayout(btn_layout)
+
+    def copy_email(self):
+        clipboard = QGuiApplication.clipboard()
+        clipboard.setText(self.email)
+        QMessageBox.information(self, "Успешно", "Логин скопирован в буфер обмена!")
+
+    def copy_password(self):
+        clipboard = QGuiApplication.clipboard()
+        clipboard.setText(self.password)
+        QMessageBox.information(self, "Успешно", "Пароль скопирован в буфер обмена!")
+
+    def copy_all(self):
+        clipboard = QGuiApplication.clipboard()
+        text_to_copy = f"Логин: {self.email}\nПароль: {self.password}"
+        clipboard.setText(text_to_copy)
+        QMessageBox.information(self, "Успешно", "Логин и пароль скопированы в буфер обмена!")

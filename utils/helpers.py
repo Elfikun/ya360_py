@@ -43,31 +43,32 @@ def generate_nickname(last: str, first: str, middle: str) -> str:
 
     return f"{last_trans}{first_trans}{middle_trans}"
 
-def generate_password(length: int = 12) -> str:
+def generate_password(length: int = 10) -> str:
     """
-    Generates a secure random password of specified length.
-    Includes uppercase, lowercase, numbers, and special characters.
+    Generates a random, readable 10-character password.
+    Contains uppercase, lowercase, and digits in randomized/arbitrary positions.
+    Excludes ambiguous characters (i, l, 1, L, o, 0, O) and special characters.
     """
-    if length < 4:
-        length = 12
+    excluded = set("il1Lo0O")
+    lower_chars = [c for c in string.ascii_lowercase if c not in excluded]
+    upper_chars = [c for c in string.ascii_uppercase if c not in excluded]
+    digit_chars = [c for c in string.digits if c not in excluded]
 
-    lower = string.ascii_lowercase
-    upper = string.ascii_uppercase
-    digits = string.digits
-    special = "!@#$%^&*()_+-=[]{}|;:,.<>?"
+    # Guarantee at least 1 upper, 1 lower, 1 digit with randomized count
+    num_upper = random.randint(1, 3)
+    num_digits = random.randint(2, 4)
+    num_lower = max(1, length - num_upper - num_digits)
 
-    all_chars = lower + upper + digits + special
+    password_list = (
+        [random.choice(upper_chars) for _ in range(num_upper)] +
+        [random.choice(lower_chars) for _ in range(num_lower)] +
+        [random.choice(digit_chars) for _ in range(num_digits)]
+    )
 
-    # Ensure at least one of each required type
-    password = [
-        random.choice(lower),
-        random.choice(upper),
-        random.choice(digits),
-        random.choice(special)
-    ]
+    all_allowed = lower_chars + upper_chars + digit_chars
+    while len(password_list) < length:
+        password_list.append(random.choice(all_allowed))
 
-    # Fill the rest randomly
-    password += [random.choice(all_chars) for _ in range(length - 4)]
-
-    random.shuffle(password)
-    return "".join(password)
+    # Shuffle to ensure arbitrary positions for uppercase, lowercase, and digits
+    random.shuffle(password_list)
+    return "".join(password_list)
