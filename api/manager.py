@@ -55,10 +55,6 @@ class ApiManager(QObject):
         worker.signals.finished.connect(lambda: self.active_workers.discard(worker))
         self.thread_pool.start(worker)
 
-    def set_tokens(self, tokens: List[str]):
-        self.tokens = tokens
-        self.clients = {token: Yandex360Client(token) for token in tokens}
-
     def _get_client_for_org(self, org_id: str) -> Yandex360Client:
         token = self.org_to_token_map.get(str(org_id))
         if token and token in self.clients:

@@ -1,9 +1,14 @@
 import sys
+import os
 import datetime
 import csv
+
+# Ensure root directory is in sys.path when running main_window.py directly
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QListWidget, QListWidgetItem, QLineEdit, QTabWidget,
+    QListWidget, QListWidgetItem, QLineEdit, QTabBar,
     QTableWidget, QTableWidgetItem, QPushButton, QLabel,
     QMessageBox, QHeaderView, QAbstractItemView, QDialog,
     QMenu, QFileDialog, QComboBox
@@ -11,10 +16,8 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, pyqtSlot, QTimer
 
 from api.manager import ApiManager
-from gui.dialogs import CreateUserDialog, ResetPasswordDialog, AutoCleanDialog, LogViewerDialog, UserCreatedSuccessDialog
+from gui.dialogs import CreateUserDialog, ResetPasswordDialog, LogViewerDialog, UserCreatedSuccessDialog
 from utils.logger import get_logger
-from utils.storage import add_to_cache, remove_from_cache
-from utils.helpers import get_operator_id
 
 logger = get_logger()
 
@@ -96,10 +99,10 @@ class MainWindow(QMainWindow):
         right_layout.addLayout(top_bar)
 
         # Tabs for filtering
-        self.tabs = QTabWidget()
-        self.tabs.addTab(QWidget(), "Все")
-        self.tabs.addTab(QWidget(), "Активные")
-        self.tabs.addTab(QWidget(), "Заблокированные")
+        self.tabs = QTabBar()
+        self.tabs.addTab("Все")
+        self.tabs.addTab("Активные")
+        self.tabs.addTab("Заблокированные")
         self.tabs.currentChanged.connect(self.on_tab_changed)
         right_layout.addWidget(self.tabs)
 
@@ -233,7 +236,6 @@ class MainWindow(QMainWindow):
     def on_user_deleted(self, org_id, user_id):
         logger.info(f"User permanently deleted: {user_id}")
         self.statusBar().showMessage("Пользователь удален навсегда", 5000)
-        remove_from_cache(user_id)
         self.all_users = [u for u in self.all_users if u.get('id') != user_id]
         self.filter_table()
         self.update_stats()
@@ -591,3 +593,15 @@ class MainWindow(QMainWindow):
         except Exception as e:
             logger.error(f"Failed to export CSV: {e}")
             QMessageBox.critical(self, "Ошибка", f"Не удалось сохранить CSV файл:\n{e}")
+
+if __name__ == "__main__":
+    from PyQt6.QtWidgets import QApplication
+    from main import load_tokens, MAIN_STYLE, setup_logger
+
+    setup_logger()
+    tokens = load_tokens()
+    app = QApplication(sys.argv)
+    app.setStyleSheet(MAIN_STYLE)
+    window = MainWindow(tokens)
+    window.show()
+    sys.exit(app.exec())

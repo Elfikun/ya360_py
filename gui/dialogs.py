@@ -1,14 +1,11 @@
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton,
-    QComboBox, QCheckBox, QMessageBox, QTableWidget, QTableWidgetItem, QHeaderView
+    QComboBox, QMessageBox
 )
-from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QGuiApplication
 
 from utils.helpers import generate_nickname, generate_password
-from utils.storage import load_cache, remove_from_cache
 from utils.logger import LOG_FILE
-import datetime
 
 class CreateUserDialog(QDialog):
     def __init__(self, organizations, parent=None):
@@ -155,72 +152,7 @@ class ResetPasswordDialog(QDialog):
         return self.password_input.text(), True
 
 
-class AutoCleanDialog(QDialog):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setWindowTitle("Авто-очистка удаленных пользователей (> 30 дней)")
-        self.resize(600, 400)
 
-        self.layout = QVBoxLayout(self)
-
-        self.table = QTableWidget()
-        self.table.setColumnCount(4)
-        self.table.setHorizontalHeaderLabels(["ID", "Никнейм", "Организация", "Дата удаления"])
-        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-        self.layout.addWidget(self.table)
-
-        self.users_to_delete = []
-        self.load_candidates()
-
-        if not self.users_to_delete:
-            self.layout.addWidget(QLabel("Нет пользователей, удаленных более 30 дней назад."))
-        else:
-            self.layout.addWidget(QLabel(f"Найдено пользователей для окончательного удаления: {len(self.users_to_delete)}"))
-
-        btn_layout = QHBoxLayout()
-        self.delete_btn = QPushButton("Удалить навсегда")
-        self.delete_btn.setStyleSheet("background-color: #d9534f; color: white;")
-        self.delete_btn.setEnabled(len(self.users_to_delete) > 0)
-        self.delete_btn.clicked.connect(self.accept)
-
-        cancel_btn = QPushButton("Отмена")
-        cancel_btn.clicked.connect(self.reject)
-
-        btn_layout.addWidget(self.delete_btn)
-        btn_layout.addWidget(cancel_btn)
-        self.layout.addLayout(btn_layout)
-
-    def load_candidates(self):
-        cache = load_cache()
-        now = datetime.datetime.now(datetime.timezone.utc)
-
-        self.table.setRowCount(0)
-
-        for user_id, data in cache.items():
-            deleted_at_str = data.get("deleted_at")
-            if deleted_at_str:
-                try:
-                    deleted_at = datetime.datetime.fromisoformat(deleted_at_str.replace('Z', '+00:00'))
-                    days_diff = (now - deleted_at).days
-                    if days_diff > 30:
-                        self.users_to_delete.append({
-                            "user_id": user_id,
-                            "org_id": data.get("org_id"),
-                            "nickname": data.get("nickname")
-                        })
-
-                        row = self.table.rowCount()
-                        self.table.insertRow(row)
-                        self.table.setItem(row, 0, QTableWidgetItem(user_id))
-                        self.table.setItem(row, 1, QTableWidgetItem(data.get("nickname", "")))
-                        self.table.setItem(row, 2, QTableWidgetItem(data.get("org_name", "")))
-                        self.table.setItem(row, 3, QTableWidgetItem(deleted_at_str[:10]))
-
-                except ValueError:
-                    pass
-
-    def get_candidates(self):
-        return self.users_to_delete
 
 
 class LogViewerDialog(QDialog):
