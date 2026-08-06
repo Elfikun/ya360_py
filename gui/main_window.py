@@ -67,11 +67,6 @@ class MainWindow(QMainWindow):
         self.stats_label = QLabel("Total: 0\nActive: 0\nDisabled: 0")
         sidebar_layout.addWidget(self.stats_label)
 
-        # Bottom sidebar buttons
-        logs_btn = QPushButton("📜 Журнал")
-        logs_btn.clicked.connect(self.show_logs)
-        sidebar_layout.addWidget(logs_btn)
-
         main_layout.addLayout(sidebar_layout)
 
         # ---------------- MAIN AREA ----------------
@@ -95,6 +90,29 @@ class MainWindow(QMainWindow):
         self.sort_combo.addItem("По дате блокировки (старые → новые)", (5, Qt.SortOrder.AscendingOrder))
         self.sort_combo.currentIndexChanged.connect(self.on_sort_combo_changed)
         top_bar.addWidget(self.sort_combo)
+
+        # Log button (Audit log icon)
+        logs_btn = QPushButton("📜")
+        logs_btn.setToolTip("Журнал действий")
+        logs_btn.setFixedSize(36, 36)
+        logs_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #ffffff;
+                border: 1px solid #ccc;
+                border-radius: 4px;
+                font-size: 16px;
+                padding: 0px;
+            }
+            QPushButton:hover {
+                background-color: #e5f0fa;
+                border-color: #005bff;
+            }
+            QPushButton:pressed {
+                background-color: #cce0f5;
+            }
+        """)
+        logs_btn.clicked.connect(self.show_logs)
+        top_bar.addWidget(logs_btn)
 
         right_layout.addLayout(top_bar)
 
