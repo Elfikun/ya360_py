@@ -2,7 +2,9 @@ import logging
 import os
 from utils.helpers import get_operator_id
 
-LOG_FILE = "data/app.log"
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+LOG_FILE = os.path.join(BASE_DIR, "data", "app.log")
+
 
 class OperatorFormatter(logging.Formatter):
     """Custom formatter to inject the operator identity into the log."""

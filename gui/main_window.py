@@ -40,6 +40,9 @@ class MainWindow(QMainWindow):
         self.update_timer.setInterval(200)
         self.update_timer.timeout.connect(self._do_update_ui)
 
+        from main import get_theme
+        self.current_theme = get_theme()
+
         self.setup_ui()
         self.setup_connections()
 
@@ -93,26 +96,19 @@ class MainWindow(QMainWindow):
 
         # Log button (Audit log icon)
         logs_btn = QPushButton("📜")
+        logs_btn.setObjectName("iconButton")
         logs_btn.setToolTip("Журнал действий")
         logs_btn.setFixedSize(36, 36)
-        logs_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #ffffff;
-                border: 1px solid #ccc;
-                border-radius: 4px;
-                font-size: 16px;
-                padding: 0px;
-            }
-            QPushButton:hover {
-                background-color: #e5f0fa;
-                border-color: #005bff;
-            }
-            QPushButton:pressed {
-                background-color: #cce0f5;
-            }
-        """)
         logs_btn.clicked.connect(self.show_logs)
         top_bar.addWidget(logs_btn)
+
+        # Theme toggle button
+        self.theme_btn = QPushButton()
+        self.theme_btn.setObjectName("iconButton")
+        self.theme_btn.setFixedSize(36, 36)
+        self.theme_btn.clicked.connect(self.toggle_theme)
+        self.update_theme_button_ui()
+        top_bar.addWidget(self.theme_btn)
 
         right_layout.addLayout(top_bar)
 
@@ -174,6 +170,29 @@ class MainWindow(QMainWindow):
         self.api_manager.user_deleted.connect(self.on_user_deleted)
         self.api_manager.error_occurred.connect(self.on_error)
         self.org_list.currentItemChanged.connect(self.on_org_selected)
+
+    def toggle_theme(self):
+        from main import set_theme
+        from gui.styles import get_theme_style
+        from PyQt6.QtWidgets import QApplication
+
+        self.current_theme = "dark" if self.current_theme == "light" else "light"
+        set_theme(self.current_theme)
+
+        app = QApplication.instance()
+        if app:
+            app.setStyleSheet(get_theme_style(self.current_theme))
+
+        self.update_theme_button_ui()
+
+    def update_theme_button_ui(self):
+        if hasattr(self, "theme_btn"):
+            if self.current_theme == "dark":
+                self.theme_btn.setText("☀️")
+                self.theme_btn.setToolTip("Переключить на светлую тему")
+            else:
+                self.theme_btn.setText("🌙")
+                self.theme_btn.setToolTip("Переключить на темную тему")
 
     # --- Slots / Callbacks ---
 
@@ -614,12 +633,14 @@ class MainWindow(QMainWindow):
 
 if __name__ == "__main__":
     from PyQt6.QtWidgets import QApplication
-    from main import load_tokens, MAIN_STYLE, setup_logger
+    from gui.styles import get_theme_style
+    from main import load_tokens, get_theme, setup_logger
 
     setup_logger()
     tokens = load_tokens()
     app = QApplication(sys.argv)
-    app.setStyleSheet(MAIN_STYLE)
+    theme = get_theme()
+    app.setStyleSheet(get_theme_style(theme))
     window = MainWindow(tokens)
     window.show()
     sys.exit(app.exec())
