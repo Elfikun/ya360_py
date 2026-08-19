@@ -1,10 +1,15 @@
 import logging
 import os
+import re
 from logging.handlers import RotatingFileHandler
 from utils.helpers import get_operator_id
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 LOG_FILE = os.path.join(BASE_DIR, "data", "app.log")
+
+_BOLD = "\033[1m"
+_RESET = "\033[0m"
+_QUOTED_RE = re.compile(r"'([^']+)'")
 
 
 class OperatorFormatter(logging.Formatter):
@@ -12,6 +17,13 @@ class OperatorFormatter(logging.Formatter):
     def format(self, record):
         record.operator_id = get_operator_id()
         return super().format(record)
+
+
+class AnsiConsoleFormatter(OperatorFormatter):
+    """Console formatter: wraps quoted values in ANSI bold for readability."""
+    def format(self, record):
+        result = super().format(record)
+        return _QUOTED_RE.sub(lambda m: f"'{_BOLD}{m.group(1)}{_RESET}'", result)
 
 def setup_logger():
     """Configures the root logger to output to a file and console."""
@@ -32,9 +44,10 @@ def setup_logger():
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
 
-        # Console handler (optional, but good for debugging)
+        # Console handler with ANSI bold highlighting for quoted values
         console_handler = logging.StreamHandler()
-        console_handler.setFormatter(formatter)
+        console_formatter = AnsiConsoleFormatter('%(asctime)s - %(levelname)s - [Operator: %(operator_id)s] - %(message)s')
+        console_handler.setFormatter(console_formatter)
         logger.addHandler(console_handler)
 
     return logger

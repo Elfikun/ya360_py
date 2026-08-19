@@ -184,6 +184,7 @@ class LogViewerDialog(QDialog):
         layout = QVBoxLayout(self)
 
         import os
+        import html
         from PyQt6.QtWidgets import QTextEdit
 
         # Search layout
@@ -204,7 +205,7 @@ class LogViewerDialog(QDialog):
         if os.path.exists(LOG_FILE):
             with open(LOG_FILE, 'r', encoding='utf-8') as f:
                 self.all_log_lines = f.readlines()
-                self.log_text.setText("".join(self.all_log_lines))
+            self.log_text.setHtml(self._format_lines(self.all_log_lines))
         else:
             self.log_text.setText("Лог файл пуст или не существует.")
 
@@ -215,13 +216,26 @@ class LogViewerDialog(QDialog):
         close_btn.clicked.connect(self.accept)
         layout.addWidget(close_btn)
 
+    def _format_lines(self, lines):
+        """Converts log lines to HTML, highlighting user nicknames in bold."""
+        import html
+        html_lines = []
+        # Match patterns like: 'nickname', e.g. 'katatp'
+        nickname_re = re.compile(r"'([^']+)'")
+        for line in lines:
+            escaped = html.escape(line.rstrip())
+            # Bold everything between single quotes (user nicknames / org names)
+            formatted = nickname_re.sub(r"'<b>\1</b>'", escaped)
+            html_lines.append(formatted)
+        return "<pre style='font-family: monospace; white-space: pre-wrap;'>" + "<br>".join(html_lines) + "</pre>"
+
     def filter_logs(self):
         search_term = self.search_input.text().lower()
         if not search_term:
-            self.log_text.setText("".join(self.all_log_lines))
+            self.log_text.setHtml(self._format_lines(self.all_log_lines))
         else:
             filtered = [line for line in self.all_log_lines if search_term in line.lower()]
-            self.log_text.setText("".join(filtered))
+            self.log_text.setHtml(self._format_lines(filtered))
 
         # Scroll to bottom again after filtering
         self.log_text.verticalScrollBar().setValue(self.log_text.verticalScrollBar().maximum())

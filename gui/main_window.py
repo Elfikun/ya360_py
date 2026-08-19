@@ -224,14 +224,36 @@ class MainWindow(QMainWindow):
         # Find org name
         org_name = next((o.get("name") for o in self.organizations if o.get("id") == org_id), org_id)
 
-        # Append new users and add custom metadata
+        # Append new users, skipping internal Yandex robot accounts
+        skipped = 0
         for u in users:
+            if self._is_robot_account(u):
+                skipped += 1
+                continue
             u['_org_id'] = org_id
             u['_org_name'] = org_name
             self.all_users.append(u)
 
-        self.statusBar().showMessage(f"Loaded users for org {org_name}", 5000)
+        msg = f"Loaded users for org {org_name}"
+        if skipped:
+            msg += f" (skipped {skipped} robot accounts)"
+        self.statusBar().showMessage(msg, 5000)
         self.update_timer.start()
+
+    @staticmethod
+    def _is_robot_account(user: dict) -> bool:
+        """Returns True for internal Yandex service/robot accounts that should be hidden."""
+        nickname = (user.get("nickname") or "").lower()
+        email = (user.get("email") or "").lower()
+
+        if "robot" in nickname:
+            return True
+        if nickname.startswith("yndx-"):
+            return True
+        if email.endswith("@yandex.ru"):
+            return True
+        return False
+
 
     def _do_update_ui(self):
         self.update_stats()
@@ -242,7 +264,7 @@ class MainWindow(QMainWindow):
         nickname = user.get("nickname", "")
         email = user.get("email") or f"{nickname}@..."
         password = self._pending_passwords.pop(nickname, "")
-        logger.info(f"User created: {nickname} ({email}) [ID: {user.get('id', '?')}]")
+        logger.info(f"User created: '{nickname}' ({email}) [ID: {user.get('id', '?')}]")
         self.statusBar().showMessage("Пользователь успешно создан!", 5000)
 
         success_dialog = UserCreatedSuccessDialog(email, password, self)
@@ -257,7 +279,7 @@ class MainWindow(QMainWindow):
     @pyqtSlot(dict)
     def on_user_updated(self, user):
         nickname = user.get("nickname") or user.get("email", "")
-        logger.info(f"User updated: {nickname} [ID: {user.get('id', '?')}]")
+        logger.info(f"User updated: '{nickname}' [ID: {user.get('id', '?')}]")
         self.statusBar().showMessage("Данные пользователя обновлены", 5000)
 
         if isinstance(user, dict) and user.get("id"):
