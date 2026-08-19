@@ -59,10 +59,10 @@ class ApiManager(QObject):
         token = self.org_to_token_map.get(str(org_id))
         if token and token in self.clients:
             return self.clients[token]
-        # Fallback to first client if not mapped (shouldn't happen ideally)
-        if self.clients:
-            return next(iter(self.clients.values()))
-        raise ValueError(f"No client configured for org_id {org_id}")
+        raise ValueError(
+            f"No client mapped for org_id '{org_id}'. "
+            f"Ensure organizations are loaded before performing actions."
+        )
 
     def fetch_orgs(self):
         # We need a custom worker to fetch orgs across all tokens
@@ -106,7 +106,7 @@ class ApiManager(QObject):
         self._start_worker(worker)
 
     def block_user(self, org_id: Any, user_id: Any):
-        self.update_user(org_id, user_id, {"is_enabled": False})
+        self.update_user(org_id, user_id, {"isEnabled": False})
 
     def reset_password(self, org_id: Any, user_id: Any, new_password: str):
         self.update_user(org_id, user_id, {

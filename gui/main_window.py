@@ -242,7 +242,7 @@ class MainWindow(QMainWindow):
         nickname = user.get("nickname", "")
         email = user.get("email") or f"{nickname}@..."
         password = self._pending_passwords.pop(nickname, "")
-        logger.info(f"User created: {nickname} ({email})")
+        logger.info(f"User created: {nickname} ({email}) [ID: {user.get('id', '?')}]")
         self.statusBar().showMessage("Пользователь успешно создан!", 5000)
 
         success_dialog = UserCreatedSuccessDialog(email, password, self)
@@ -256,7 +256,8 @@ class MainWindow(QMainWindow):
 
     @pyqtSlot(dict)
     def on_user_updated(self, user):
-        logger.info(f"User updated: {user.get('id')}")
+        nickname = user.get("nickname") or user.get("email", "")
+        logger.info(f"User updated: {nickname} [ID: {user.get('id', '?')}]")
         self.statusBar().showMessage("Данные пользователя обновлены", 5000)
 
         if isinstance(user, dict) and user.get("id"):
@@ -271,7 +272,8 @@ class MainWindow(QMainWindow):
 
     @pyqtSlot(str, str)
     def on_user_deleted(self, org_id, user_id):
-        logger.info(f"User permanently deleted: {user_id}")
+        org_name = next((o.get("name") for o in self.organizations if str(o.get("id")) == str(org_id)), org_id)
+        logger.info(f"User permanently deleted: [ID: {user_id}] from org '{org_name}'")
         self.statusBar().showMessage("Пользователь удален навсегда", 5000)
         self.all_users = [u for u in self.all_users if u.get('id') != user_id]
         self.filter_table()
@@ -439,7 +441,8 @@ class MainWindow(QMainWindow):
             password = data.get("password", "")
             if nickname:
                 self._pending_passwords[nickname] = password
-            logger.info(f"Creating user {nickname} in org {org_id}")
+            org_name = next((o.get("name") for o in self.organizations if str(o.get("id")) == str(org_id)), org_id)
+            logger.info(f"Creating user '{nickname}' in org '{org_name}'")
             self.api_manager.create_user(org_id, data)
 
     def lock_user(self):
@@ -456,9 +459,11 @@ class MainWindow(QMainWindow):
         for user in users:
             org_id = user.get("_org_id")
             user_id = user.get("id")
+            nickname = user.get("nickname") or user.get("email", "")
+            org_name = user.get("_org_name", org_id)
             user["_blocked_at"] = now_date
             user["isEnabledUpdatedAt"] = now_date
-            logger.info(f"Blocking user {user_id}")
+            logger.info(f"Blocking user '{nickname}' in org '{org_name}' [ID: {user_id}]")
             self.api_manager.block_user(org_id, user_id)
 
     def unlock_user(self):
@@ -474,8 +479,10 @@ class MainWindow(QMainWindow):
         for user in users:
             org_id = user.get("_org_id")
             user_id = user.get("id")
-            logger.info(f"Unblocking user {user_id}")
-            self.api_manager.update_user(org_id, user_id, {"is_enabled": True})
+            nickname = user.get("nickname") or user.get("email", "")
+            org_name = user.get("_org_name", org_id)
+            logger.info(f"Unblocking user '{nickname}' in org '{org_name}' [ID: {user_id}]")
+            self.api_manager.update_user(org_id, user_id, {"isEnabled": True})
 
     def reset_password(self):
         user = self.get_selected_user()
@@ -486,7 +493,9 @@ class MainWindow(QMainWindow):
                 org_id = user.get("_org_id")
                 user_id = user.get("id")
 
-                logger.info(f"Resetting password for {user_id}")
+                nickname = user.get("nickname") or user.get("email", "")
+                org_name = user.get("_org_name", org_id)
+                logger.info(f"Resetting password for '{nickname}' in org '{org_name}' [ID: {user_id}]")
                 self.api_manager.update_user(org_id, user_id, {
                     "password": new_password,
                     "passwordChangeRequired": force_change
@@ -517,7 +526,9 @@ class MainWindow(QMainWindow):
             for user in users:
                 org_id = user.get("_org_id")
                 user_id = user.get("id")
-                logger.info(f"Permanently deleting user {user_id}")
+                nickname = user.get("nickname") or user.get("email", "")
+                org_name = user.get("_org_name", org_id)
+                logger.info(f"Permanently deleting user '{nickname}' from org '{org_name}' [ID: {user_id}]")
                 self.api_manager.delete_user_permanently(org_id, user_id)
 
     def show_logs(self):

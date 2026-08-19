@@ -60,7 +60,7 @@ class Yandex360Client:
 
                 page += 1
             except requests.exceptions.RequestException as e:
-                logger.error(f"Failed to fetch users for org {org_id}: {e}")
+                logger.error(f"Failed to fetch users for org '{org_id}': {e}")
                 raise
 
         return all_users
@@ -75,13 +75,14 @@ class Yandex360Client:
             payload["departmentId"] = 1
 
         try:
-            logger.info(f"POST {url} payload: {payload}")
+            safe_payload = {k: ("***" if k == "password" else v) for k, v in payload.items()}
+            logger.info(f"POST {url} payload: {safe_payload}")
             response = self.session.post(url, json=payload)
             response.raise_for_status()
             return response.json()
         except requests.exceptions.RequestException as e:
             err_msg = e.response.text if e.response is not None else str(e)
-            logger.error(f"Failed to create user in org {org_id}: {e} - Details: {err_msg}")
+            logger.error(f"Failed to create user in org '{org_id}': {e} - Details: {err_msg}")
             raise Exception(f"{e} - {err_msg}") from e
 
     def update_user(self, org_id: str, user_id: str, user_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -90,14 +91,15 @@ class Yandex360Client:
         """
         url = f"{self.BASE_URL}/org/{org_id}/users/{user_id}"
         try:
-            logger.info(f"PATCH {url} payload: {user_data}")
+            safe_data = {k: ("***" if k == "password" else v) for k, v in user_data.items()}
+            logger.info(f"PATCH {url} payload: {safe_data}")
             response = self.session.patch(url, json=user_data)
             response.raise_for_status()
-            logger.info(f"PATCH response for user {user_id}: {response.text}")
+            logger.info(f"PATCH user {user_id}: HTTP {response.status_code}")
             return response.json()
         except requests.exceptions.RequestException as e:
             err_msg = e.response.text if e.response is not None else str(e)
-            logger.error(f"Failed to update user {user_id} in org {org_id}: {e} - Details: {err_msg}")
+            logger.error(f"Failed to update user '{user_id}' in org '{org_id}': {e} - Details: {err_msg}")
             raise Exception(f"{e} - {err_msg}") from e
 
     def delete_user(self, org_id: str, user_id: str):
@@ -109,12 +111,12 @@ class Yandex360Client:
         try:
             response = self.session.delete(url)
             if response.status_code == 400 and "account.disabled" in response.text:
-                logger.info(f"User {user_id} is disabled. Unblocking before deletion...")
-                self.update_user(org_id, user_id, {"is_enabled": True})
+                logger.info(f"User '{user_id}' is disabled. Unblocking before deletion...")
+                self.update_user(org_id, user_id, {"isEnabled": True})
                 response = self.session.delete(url)
             response.raise_for_status()
             return True
         except requests.exceptions.RequestException as e:
             err_msg = e.response.text if e.response is not None else str(e)
-            logger.error(f"Failed to delete user {user_id} in org {org_id}: {e} - Details: {err_msg}")
+            logger.error(f"Failed to delete user '{user_id}' from org '{org_id}': {e} - Details: {err_msg}")
             raise Exception(f"{e} - {err_msg}") from e

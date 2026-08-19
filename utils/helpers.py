@@ -1,4 +1,4 @@
-import random
+import secrets
 import string
 import os
 import getpass
@@ -55,20 +55,22 @@ def generate_password(length: int = 10) -> str:
     digit_chars = [c for c in string.digits if c not in excluded]
 
     # Guarantee at least 1 upper, 1 lower, 1 digit with randomized count
-    num_upper = random.randint(1, 3)
-    num_digits = random.randint(2, 4)
+    num_upper = secrets.randbelow(3) + 1  # 1..3
+    num_digits = secrets.randbelow(3) + 2  # 2..4
     num_lower = max(1, length - num_upper - num_digits)
 
     password_list = (
-        [random.choice(upper_chars) for _ in range(num_upper)] +
-        [random.choice(lower_chars) for _ in range(num_lower)] +
-        [random.choice(digit_chars) for _ in range(num_digits)]
+        [secrets.choice(upper_chars) for _ in range(num_upper)] +
+        [secrets.choice(lower_chars) for _ in range(num_lower)] +
+        [secrets.choice(digit_chars) for _ in range(num_digits)]
     )
 
     all_allowed = lower_chars + upper_chars + digit_chars
     while len(password_list) < length:
-        password_list.append(random.choice(all_allowed))
+        password_list.append(secrets.choice(all_allowed))
 
     # Shuffle to ensure arbitrary positions for uppercase, lowercase, and digits
-    random.shuffle(password_list)
+    # secrets doesn't have shuffle, use secrets.SystemRandom which is CSPRNG-backed
+    rng = secrets.SystemRandom()
+    rng.shuffle(password_list)
     return "".join(password_list)

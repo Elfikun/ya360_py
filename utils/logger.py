@@ -1,5 +1,6 @@
 import logging
 import os
+from logging.handlers import RotatingFileHandler
 from utils.helpers import get_operator_id
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -24,8 +25,10 @@ def setup_logger():
     if not logger.handlers:
         formatter = OperatorFormatter('%(asctime)s - %(levelname)s - [Operator: %(operator_id)s] - %(message)s')
 
-        # File handler
-        file_handler = logging.FileHandler(LOG_FILE, encoding='utf-8')
+        # File handler with rotation: 5 MB max, 3 backup files
+        file_handler = RotatingFileHandler(
+            LOG_FILE, maxBytes=5 * 1024 * 1024, backupCount=3, encoding='utf-8'
+        )
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
 

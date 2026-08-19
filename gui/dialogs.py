@@ -3,6 +3,7 @@ from PyQt6.QtWidgets import (
     QComboBox, QMessageBox
 )
 from PyQt6.QtGui import QGuiApplication
+import re
 
 from utils.helpers import generate_nickname, generate_password
 from utils.logger import LOG_FILE
@@ -90,9 +91,28 @@ class CreateUserDialog(QDialog):
         clipboard.setText(self.password_input.text())
 
     def accept(self):
-        if not self.last_name_input.text().strip() or not self.first_name_input.text().strip():
+        last = self.last_name_input.text().strip()
+        first = self.first_name_input.text().strip()
+        nickname = self.nickname_input.text().strip()
+        password = self.password_input.text()
+
+        if not last or not first:
             QMessageBox.warning(self, "Ошибка валидации", "Поля 'Фамилия' и 'Имя' обязательны для заполнения.")
             return
+
+        # Nickname: only lowercase latin letters, digits, dots, underscores, hyphens
+        if nickname and not re.fullmatch(r'[a-z0-9._\-]+', nickname):
+            QMessageBox.warning(
+                self,
+                "Ошибка валидации",
+                "Никнейм может содержать только строчные латинские буквы, цифры и символы: . _ -"
+            )
+            return
+
+        if len(password) < 6:
+            QMessageBox.warning(self, "Ошибка валидации", "Пароль должен быть не менее 6 символов.")
+            return
+
         super().accept()
 
     def get_data(self):
