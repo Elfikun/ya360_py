@@ -108,12 +108,6 @@ class ApiManager(QObject):
     def block_user(self, org_id: Any, user_id: Any):
         self.update_user(org_id, user_id, {"isEnabled": False})
 
-    def reset_password(self, org_id: Any, user_id: Any, new_password: str):
-        self.update_user(org_id, user_id, {
-            "password": new_password,
-            "passwordChangeRequired": True
-        })
-
     def delete_user_permanently(self, org_id: Any, user_id: Any):
         client = self._get_client_for_org(org_id)
         worker = Worker(client.delete_user, str(org_id), str(user_id))

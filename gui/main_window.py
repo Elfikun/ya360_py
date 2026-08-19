@@ -18,6 +18,7 @@ from PyQt6.QtCore import Qt, pyqtSlot, QTimer
 from api.manager import ApiManager
 from gui.dialogs import CreateUserDialog, ResetPasswordDialog, LogViewerDialog, UserCreatedSuccessDialog
 from utils.logger import get_logger
+from utils.config import get_theme, set_theme
 
 logger = get_logger()
 
@@ -40,7 +41,6 @@ class MainWindow(QMainWindow):
         self.update_timer.setInterval(200)
         self.update_timer.timeout.connect(self._do_update_ui)
 
-        from main import get_theme
         self.current_theme = get_theme()
 
         self.setup_ui()
@@ -172,7 +172,6 @@ class MainWindow(QMainWindow):
         self.org_list.currentItemChanged.connect(self.on_org_selected)
 
     def toggle_theme(self):
-        from main import set_theme
         from gui.styles import get_theme_style
         from PyQt6.QtWidgets import QApplication
 
@@ -663,17 +662,3 @@ class MainWindow(QMainWindow):
         except Exception as e:
             logger.error(f"Failed to export CSV: {e}")
             QMessageBox.critical(self, "Ошибка", f"Не удалось сохранить CSV файл:\n{e}")
-
-if __name__ == "__main__":
-    from PyQt6.QtWidgets import QApplication
-    from gui.styles import get_theme_style
-    from main import load_tokens, get_theme, setup_logger
-
-    setup_logger()
-    tokens = load_tokens()
-    app = QApplication(sys.argv)
-    theme = get_theme()
-    app.setStyleSheet(get_theme_style(theme))
-    window = MainWindow(tokens)
-    window.show()
-    sys.exit(app.exec())

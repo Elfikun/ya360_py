@@ -1,9 +1,11 @@
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton,
-    QComboBox, QMessageBox
+    QComboBox, QMessageBox, QTextEdit
 )
 from PyQt6.QtGui import QGuiApplication
 import re
+import html
+import os
 
 from utils.helpers import generate_nickname, generate_password
 from utils.logger import LOG_FILE
@@ -183,10 +185,6 @@ class LogViewerDialog(QDialog):
 
         layout = QVBoxLayout(self)
 
-        import os
-        import html
-        from PyQt6.QtWidgets import QTextEdit
-
         # Search layout
         search_layout = QHBoxLayout()
         self.search_input = QLineEdit()
@@ -218,7 +216,6 @@ class LogViewerDialog(QDialog):
 
     def _format_lines(self, lines):
         """Converts log lines to HTML, highlighting user nicknames in bold."""
-        import html
         html_lines = []
         # Match patterns like: 'nickname', e.g. 'katatp'
         nickname_re = re.compile(r"'([^']+)'")
