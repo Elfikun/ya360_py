@@ -23,12 +23,12 @@ from utils.config import get_theme, set_theme
 logger = get_logger()
 
 class MainWindow(QMainWindow):
-    def __init__(self, tokens: list):
+    def __init__(self, passwork_settings: dict):
         super().__init__()
         self.setWindowTitle("Yandex 360 Directory Manager")
         self.resize(1200, 800)
 
-        self.api_manager = ApiManager(tokens)
+        self.api_manager = ApiManager()
         self.organizations = []
         self.all_users = []  # List of all fetched users
         self._pending_passwords = {}
@@ -42,12 +42,55 @@ class MainWindow(QMainWindow):
         self.update_timer.timeout.connect(self._do_update_ui)
 
         self.current_theme = get_theme()
+        self.passwork_settings = passwork_settings
 
+        # Initialize UI elements
         self.setup_ui()
         self.setup_connections()
 
-        # Start initial data fetch
-        self.statusBar().showMessage("Fetching organizations...")
+        # Disable main interaction elements until tokens are loaded
+        self._set_main_interaction_enabled(False)
+
+        self.fetch_tokens()
+
+    def _set_main_interaction_enabled(self, enabled: bool):
+        """Enables or disables main UI components, keeping the parent window and retry button active."""
+        if hasattr(self, 'org_list'):
+            self.org_list.setEnabled(enabled)
+        if hasattr(self, 'table'):
+            self.table.setEnabled(enabled)
+        if hasattr(self, 'btn_create'):
+            self.btn_create.setEnabled(enabled)
+            self.btn_lock.setEnabled(enabled)
+            self.btn_unlock.setEnabled(enabled)
+            self.btn_reset_pass.setEnabled(enabled)
+            self.btn_delete.setEnabled(enabled)
+
+    def fetch_tokens(self):
+        if hasattr(self, 'retry_btn'):
+            self.retry_btn.hide()
+        self.statusBar().showMessage("Подключение к Passwork и получение токенов...")
+        url = self.passwork_settings.get("passwork_url")
+        token = self.passwork_settings.get("passwork_api_token")
+        tag = self.passwork_settings.get("passwork_search_tag")
+        
+        if not url or not token or token == "YOUR_PASSWORK_API_TOKEN_HERE":
+            self.on_error("Ошибка конфигурации", "Не настроены параметры Passwork. Пожалуйста, проверьте config.json.")
+            self.retry_btn.show()
+        else:
+            self.api_manager.fetch_tokens_from_passwork_async(url, token, tag)
+
+    def retry_fetch_tokens(self):
+        from utils.config import load_passwork_settings
+        self.passwork_settings = load_passwork_settings()
+        self.fetch_tokens()
+
+    @pyqtSlot(list)
+    def on_tokens_fetched(self, tokens):
+        self._set_main_interaction_enabled(True)
+        if hasattr(self, 'retry_btn'):
+            self.retry_btn.hide()
+        self.statusBar().showMessage("Токены успешно получены. Загрузка организаций...")
         self.api_manager.fetch_orgs()
 
     def setup_ui(self):
@@ -134,6 +177,13 @@ class MainWindow(QMainWindow):
         self.table.setSortingEnabled(True)
         right_layout.addWidget(self.table)
 
+        # Retry button for Passwork
+        self.retry_btn = QPushButton("Повторить подключение к Passwork")
+        self.retry_btn.clicked.connect(self.retry_fetch_tokens)
+        self.retry_btn.hide()
+        self.retry_btn.setStyleSheet("background-color: #ff9800; color: white; font-weight: bold; padding: 10px;")
+        right_layout.addWidget(self.retry_btn)
+
         # Action Buttons
         action_layout = QHBoxLayout()
 
@@ -163,6 +213,7 @@ class MainWindow(QMainWindow):
         main_layout.addLayout(right_layout)
 
     def setup_connections(self):
+        self.api_manager.tokens_fetched.connect(self.on_tokens_fetched)
         self.api_manager.orgs_loaded.connect(self.on_orgs_loaded)
         self.api_manager.users_loaded.connect(self.on_users_loaded)
         self.api_manager.user_created.connect(self.on_user_created)
@@ -304,6 +355,9 @@ class MainWindow(QMainWindow):
     def on_error(self, title, message):
         QMessageBox.critical(self, title, message)
         self.statusBar().showMessage(f"Error: {title}")
+        if title in ["Ошибка Passwork", "Токены не найдены", "Ошибка конфигурации"]:
+            if hasattr(self, 'retry_btn'):
+                self.retry_btn.show()
 
     # --- UI Interactions ---
 

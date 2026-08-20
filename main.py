@@ -25,29 +25,8 @@ def main():
         return
 
     passwork_settings = load_passwork_settings()
-    url = passwork_settings.get("passwork_url")
-    token = passwork_settings.get("passwork_api_token")
-    tag = passwork_settings.get("passwork_search_tag")
 
-    if not url or not token or token == "YOUR_PASSWORK_API_TOKEN_HERE":
-        QMessageBox.warning(
-            None,
-            "Ошибка конфигурации",
-            f"Пожалуйста, укажите корректные данные для подключения к Passwork (URL и API Token) в файле:\n{CONFIG_FILE}"
-        )
-        return
-
-    tokens = fetch_yandex_tokens_from_passwork(url, token, tag)
-
-    if not tokens:
-        QMessageBox.warning(
-            None,
-            "Токены не найдены",
-            f"Не удалось получить токены Yandex 360 из Passwork.\nУбедитесь, что в Passwork существуют записи с тегом '{tag}' и у вас есть к ним доступ."
-        )
-        return
-
-    window = MainWindow(tokens)
+    window = MainWindow(passwork_settings)
     window.show()
 
     sys.exit(app.exec())
