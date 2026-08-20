@@ -2,6 +2,7 @@ from PyQt6.QtCore import QObject, pyqtSignal, QRunnable, QThreadPool
 from typing import Dict, Any, List
 from api.client import Yandex360Client
 from utils.logger import get_logger
+from utils.passwork_integration import fetch_yandex_tokens_from_passwork
 
 logger = get_logger()
 
@@ -40,15 +41,35 @@ class ApiManager(QObject):
     user_updated = pyqtSignal(dict)
     user_deleted = pyqtSignal(str, str) # org_id, user_id
     error_occurred = pyqtSignal(str, str) # title, error_message
+    tokens_fetched = pyqtSignal(list) # Emitted when Passwork tokens are successfully fetched
 
-    def __init__(self, tokens: List[str]):
+    def __init__(self):
         super().__init__()
-        self.tokens = tokens
-        self.clients = {token: Yandex360Client(token) for token in tokens}
+        self.tokens = []
+        self.clients = {}
         self.org_to_token_map = {} # Maps org_id to the token used to access it
         self.thread_pool = QThreadPool()
         self.active_workers = set()
-        logger.info(f"ApiManager initialized with {len(tokens)} tokens and max thread count: {self.thread_pool.maxThreadCount()}")
+        logger.info(f"ApiManager initialized with max thread count: {self.thread_pool.maxThreadCount()}")
+
+    def set_tokens(self, tokens: List[str]):
+        self.tokens = tokens
+        self.clients = {token: Yandex360Client(token) for token in tokens}
+        logger.info(f"ApiManager updated with {len(tokens)} tokens")
+
+    def fetch_tokens_from_passwork_async(self, url: str, token: str, tag: str):
+        """Fetches tokens from Passwork in a background thread."""
+        worker = Worker(fetch_yandex_tokens_from_passwork, url, token, tag)
+        worker.signals.result.connect(self._on_tokens_fetched)
+        worker.signals.error.connect(lambda err: self.error_occurred.emit("Ошибка Passwork", f"Не удалось получить токены: {str(err[0])}"))
+        self._start_worker(worker)
+
+    def _on_tokens_fetched(self, tokens: list[str]):
+        if tokens:
+            self.set_tokens(tokens)
+            self.tokens_fetched.emit(tokens)
+        else:
+            self.error_occurred.emit("Токены не найдены", "Не удалось получить токены Yandex 360 из Passwork.")
 
     def _start_worker(self, worker: Worker):
         self.active_workers.add(worker)

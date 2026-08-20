@@ -36,6 +36,22 @@ def fetch_yandex_tokens_from_passwork(url: str, api_token: str, tag: str) -> lis
         logger.info(f"Searching for tokens at: {search_endpoint} with tag: {tag}")
         response = requests.post(search_endpoint, json=payload, headers=headers, verify=False)
 
+        # If API v4 endpoint is not found (404), fallback to Passwork v5/v6 generic search
+        if response.status_code == 404:
+            search_endpoint = f"{base_url}/api/v4/search/passwords"
+            logger.info(f"Fallback search endpoint: {search_endpoint}")
+            response = requests.post(search_endpoint, json=payload, headers=headers, verify=False)
+
+        if response.status_code == 404:
+            search_endpoint = f"{base_url}/api/v3/passwords/search"
+            logger.info(f"Fallback search endpoint: {search_endpoint}")
+            response = requests.post(search_endpoint, json=payload, headers=headers, verify=False)
+
+        if response.status_code == 404:
+            search_endpoint = f"{base_url}/api/v4/items/search"
+            logger.info(f"Fallback search endpoint: {search_endpoint}")
+            response = requests.post(search_endpoint, json=payload, headers=headers, verify=False)
+
         if response.status_code != 200:
             logger.error(f"Passwork search API failed: HTTP {response.status_code} - {response.text}")
             return []
@@ -57,6 +73,15 @@ def fetch_yandex_tokens_from_passwork(url: str, api_token: str, tag: str) -> lis
 
             item_endpoint = f"{base_url}/api/v4/passwords/{item_id}"
             item_resp = requests.get(item_endpoint, headers=headers, verify=False)
+
+            # If 404, fallback to v5/v6 generic endpoint
+            if item_resp.status_code == 404:
+                item_endpoint = f"{base_url}/api/v4/items/{item_id}"  # Try without v4 if it fails
+                item_resp = requests.get(item_endpoint, headers=headers, verify=False)
+
+            if item_resp.status_code == 404:
+                item_endpoint = f"{base_url}/api/v3/passwords/{item_id}"  # Try without v4 if it fails
+                item_resp = requests.get(item_endpoint, headers=headers, verify=False)
 
             if item_resp.status_code == 200:
                 item_details = item_resp.json().get("data", {})
