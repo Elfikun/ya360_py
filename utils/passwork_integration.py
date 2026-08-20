@@ -23,13 +23,33 @@ def fetch_yandex_tokens_from_passwork(url: str, api_token: str, tag: str) -> lis
     # Strip any trailing slashes or fragment identifiers from the URL
     base_url = url.split('/#')[0].rstrip('/')
     
-    headers = {
-        "Passwork-Auth": api_token,  # Passwork v4 commonly uses Passwork-Auth header for API Keys
-        "Content-Type": "application/json"
-    }
-
     try:
-        # Step 1: Search for passwords with the given tag using Passwork API v4
+        # Step 1: Authenticate and obtain a session token
+        auth_endpoint = f"{base_url}/api/v4/auth/login/{api_token}"
+        logger.info(f"Authenticating with Passwork at: {base_url}/api/v4/auth/login/...")
+        auth_response = requests.post(auth_endpoint, json={}, headers={"Content-Type": "application/json"}, verify=False)
+
+        if auth_response.status_code != 200:
+            logger.error(f"Passwork authentication failed: HTTP {auth_response.status_code} - {auth_response.text}")
+            return []
+
+        auth_data = auth_response.json()
+        session_token = auth_data.get("data", {}).get("token")
+
+        if not session_token:
+            # Fallback if structure is different
+            session_token = auth_data.get("token")
+
+        if not session_token:
+            logger.error(f"Passwork authentication succeeded but no token was returned in the response: {auth_response.text}")
+            return []
+
+        headers = {
+            "Passwork-Auth": session_token,
+            "Content-Type": "application/json"
+        }
+
+        # Step 2: Search for passwords with the given tag using Passwork API v4
         search_endpoint = f"{base_url}/api/v4/passwords/search"
         payload = {"tags": [tag]}
         
@@ -65,7 +85,7 @@ def fetch_yandex_tokens_from_passwork(url: str, api_token: str, tag: str) -> lis
             logger.warning(f"No items found with tag '{tag}' in Passwork.")
             return []
             
-        # Step 2: Fetch detailed information for each found password
+        # Step 3: Fetch detailed information for each found password
         for item in items:
             item_id = item.get("id")
             if not item_id:
