@@ -11,12 +11,9 @@ def ensure_config():
     if not os.path.exists(CONFIG_FILE):
         default_config = {
             "theme": "light",
-            "tokens": [
-                {
-                    "name": "Default Token",
-                    "value": "YOUR_YANDEX_OAUTH_TOKEN_HERE"
-                }
-            ]
+            "passwork_url": "https://your-passwork-domain.com",
+            "passwork_api_token": "YOUR_PASSWORK_API_TOKEN_HERE",
+            "passwork_search_tag": "yandex-360-token"
         }
         with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
             json.dump(default_config, f, indent=4, ensure_ascii=False)
@@ -42,12 +39,14 @@ def save_config(config_data: dict):
     except Exception as e:
         print(f"Error saving config: {e}")
 
-def load_tokens():
-    """Loads all tokens from config.json."""
+def load_passwork_settings():
+    """Loads Passwork connection settings from config.json."""
     config = load_config()
-    tokens_data = config.get("tokens", [])
-    tokens = [t.get("value") for t in tokens_data if t.get("value") and t.get("value") != "YOUR_YANDEX_OAUTH_TOKEN_HERE"]
-    return tokens
+    return {
+        "passwork_url": config.get("passwork_url"),
+        "passwork_api_token": config.get("passwork_api_token"),
+        "passwork_search_tag": config.get("passwork_search_tag", "yandex-360-token")
+    }
 
 def get_theme() -> str:
     """Gets current saved theme name ('light' or 'dark')."""
