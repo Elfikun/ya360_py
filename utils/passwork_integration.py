@@ -29,8 +29,8 @@ def fetch_yandex_tokens_from_passwork(url: str, api_token: str, tag: str) -> lis
     }
 
     try:
-        # Step 1: Search for items with the given tag
-        search_endpoint = f"{base_url}/api/v4/items/search"
+        # Step 1: Search for passwords with the given tag using Passwork API v4
+        search_endpoint = f"{base_url}/api/v4/passwords/search"
         payload = {"tags": [tag]}
 
         logger.info(f"Searching for tokens at: {search_endpoint} with tag: {tag}")
@@ -42,36 +42,35 @@ def fetch_yandex_tokens_from_passwork(url: str, api_token: str, tag: str) -> lis
 
         data = response.json()
 
-        # Passwork API structure usually wraps data in {"response": {"data": [...]}} or similar,
-        # or directly returns a list if it's a specific endpoint.
-        # For v4 /items/search, it's typically data["data"]
+        # Passwork v4 API returns data usually inside 'data' key
         items = data.get("data", [])
 
         if not items:
             logger.warning(f"No items found with tag '{tag}' in Passwork.")
             return []
 
-        # Step 2: Fetch detailed information for each found item to get the password
+        # Step 2: Fetch detailed information for each found password
         for item in items:
             item_id = item.get("id")
             if not item_id:
                 continue
 
-            item_endpoint = f"{base_url}/api/v4/items/{item_id}"
+            item_endpoint = f"{base_url}/api/v4/passwords/{item_id}"
             item_resp = requests.get(item_endpoint, headers=headers, verify=False)
 
             if item_resp.status_code == 200:
                 item_details = item_resp.json().get("data", {})
+
+                # In Passwork API v4, cleartext password is often under 'password'
+                # If it's client-encrypted, it's under 'cryptedPassword'
                 password = item_details.get("password")
 
-                # If password is cleartext
                 if password:
                     tokens.append(password)
                 elif item_details.get("cryptedPassword"):
-                    # If client-side encryption is used and no master-password is provided
                     logger.warning(f"Item '{item_details.get('name')}' is client-encrypted. API key cannot decrypt it without Master Password.")
             else:
-                logger.error(f"Failed to fetch details for item {item_id}: HTTP {item_resp.status_code}")
+                logger.error(f"Failed to fetch details for password {item_id}: HTTP {item_resp.status_code}")
 
         logger.info(f"Successfully fetched {len(tokens)} token(s) from Passwork.")
 
