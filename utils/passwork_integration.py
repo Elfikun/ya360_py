@@ -28,22 +28,22 @@ def fetch_yandex_tokens_from_passwork(url: str, api_token: str, tag: str) -> lis
         auth_endpoint = f"{base_url}/api/v4/auth/login/{api_token}"
         logger.info(f"Authenticating with Passwork at: {base_url}/api/v4/auth/login/...")
         auth_response = requests.post(auth_endpoint, json={}, headers={"Content-Type": "application/json"}, verify=False)
-
+        
         if auth_response.status_code != 200:
             logger.error(f"Passwork authentication failed: HTTP {auth_response.status_code} - {auth_response.text}")
             return []
-
+            
         auth_data = auth_response.json()
         session_token = auth_data.get("data", {}).get("token")
-
+        
         if not session_token:
             # Fallback if structure is different
             session_token = auth_data.get("token")
-
+            
         if not session_token:
             logger.error(f"Passwork authentication succeeded but no token was returned in the response: {auth_response.text}")
             return []
-
+            
         headers = {
             "Passwork-Auth": session_token,
             "Content-Type": "application/json"
