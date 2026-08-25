@@ -73,7 +73,7 @@ class MainWindow(QMainWindow):
         url = self.passwork_settings.get("passwork_url")
         token = self.passwork_settings.get("passwork_api_token")
         tag = self.passwork_settings.get("passwork_search_tag")
-        
+
         if not url or not token or token == "YOUR_PASSWORK_API_TOKEN_HERE":
             self.on_error("Ошибка конфигурации", "Не настроены параметры Passwork. Пожалуйста, проверьте config.json.")
             self.retry_btn.show()
