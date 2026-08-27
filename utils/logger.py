@@ -1,10 +1,24 @@
 import logging
 import os
 import re
+import sys
 from logging.handlers import RotatingFileHandler
 from utils.helpers import get_operator_id
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+def _get_base_dir() -> str:
+    """Returns the base directory for data files.
+
+    When running as a PyInstaller --onefile bundle, sys.executable points to
+    the .exe itself, so we use its parent directory.  When running as a plain
+    Python script we fall back to the project root.
+    """
+    if getattr(sys, 'frozen', False):
+        return os.path.dirname(sys.executable)
+    return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+BASE_DIR = _get_base_dir()
 LOG_FILE = os.path.join(BASE_DIR, "data", "app.log")
 
 _BOLD = "\033[1m"

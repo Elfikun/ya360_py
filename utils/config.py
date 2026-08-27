@@ -1,7 +1,24 @@
 import os
+import sys
 import json
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+def _get_base_dir() -> str:
+    """Returns the base directory for data files.
+
+    When running as a PyInstaller --onefile bundle, sys.executable points to
+    the .exe itself, so we use its parent directory.  When running as a plain
+    Python script we fall back to the project root (two levels up from this
+    file).
+    """
+    if getattr(sys, 'frozen', False):
+        # Packaged: place data/ next to the .exe
+        return os.path.dirname(sys.executable)
+    # Development: project root
+    return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+BASE_DIR = _get_base_dir()
 CONFIG_FILE = os.path.join(BASE_DIR, "data", "config.json")
 
 

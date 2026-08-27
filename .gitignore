@@ -3,3 +3,12 @@ __pycache__/
 data/config.json
 data/deleted_cache.json
 data/app.log
+
+# PyInstaller build output
+dist/
+build/
+*.spec.bak
+
+# Generated icon binaries (source make_icon.py is kept)
+assets/app.ico
+assets/icon.png
